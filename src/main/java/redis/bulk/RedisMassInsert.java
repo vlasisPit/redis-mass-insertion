@@ -25,11 +25,6 @@ import io.lettuce.core.cluster.api.async.RedisAdvancedClusterAsyncCommands;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * This is a Redis Mass insertion application. You can bulk import some keys in Redis, alongside expiration time in order to
- * be deleted automatically after the time interval you specified as an argument has elapsed.
- * You can some hash keys in Redis using the "hset" command.
- */
 public class RedisMassInsert {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(RedisMassInsert.class);
@@ -38,13 +33,13 @@ public class RedisMassInsert {
         String redisClusterString = args[0];
         String numberOfKeys = args[1];	//number of keys to be inserted from each thread
         String batchSize = args[2];
-        String numberOfTenants = args[3];
+        String keyHashTagNumber = args[3];
         Duration expirationTime = Duration.parse(args[4]);
         String numberOfThreads = args[5];
 
-        String keyFormat = "{%s}:submission-view-v1.1:%s";
-        String tenantFormat = "perf-%s-mass-le%s";
-        String[] tenants = createTenantIDs(Integer.parseInt(numberOfTenants), tenantFormat);
+        String keyFormat = "{%s}:redis-bulk-import:%s";
+        String tenantFormat = "redis-%s-mass-%s";
+        String[] tenants = createTenantIDs(Integer.parseInt(keyHashTagNumber), tenantFormat);
 
         redisMassInsertion(keyFormat, tenants, numberOfKeys, batchSize, redisClusterString, expirationTime, Integer.parseInt(numberOfThreads));
     }
