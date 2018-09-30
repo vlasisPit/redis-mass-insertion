@@ -22,3 +22,24 @@ This is for 5 minutes.
 
 * numberOfThreads = (args[5]) Number of threads to execute in parallel Redis bulk import.
 
+# Run the application
+You can run the application as a simple Java application, but also as a Docker container or service, if you use docker swarm.
+
+* Run as java application (change the ${maven-version} with maven project version eg 1.0-SNAPSHOT)
+`java -jar target/redis-mass-insertion-${maven-version}-jar-with-dependencies.jar redis://127.0.0.1:7000,redis://127.0.0.1:7001,redis://127.0.0.1:7002 10000 1000 5 PT5M 4`
+
+* Run as docker container (first you need to build the docker image)
+`docker run -d ${image} -e 'JAVA_OPTS=-server -Xms32m -Xmx64m -XX:+UseG1GC -XX:MaxGCPauseMillis=1000 -XX:ParallelGCThreads=4 -XX:ConcGCThreads=2 -XX:InitiatingHeapOccupancyPercent=70' redis://127.0.0.1:7000,redis://127.0.0.1:7001,redis://127.0.0.1:7002 10000 1000 5 PT5M 4`
+
+* Run as docker service in swarm mode
+`docker service create 
+	--restart-condition none 
+	--replicas ${number_of_replicas} 
+	--detach=false 
+	--name redis-mass-insertion 
+	--endpoint-mode dnsrr 
+	-e docker_component=redis-mass-insertion 
+	-e 'JAVA_OPTS=-server -Xms32m -Xmx64m -XX:+UseG1GC -XX:MaxGCPauseMillis=1000 -XX:ParallelGCThreads=4 -XX:ConcGCThreads=2 -XX:InitiatingHeapOccupancyPercent=70' 
+	--network=${network name} 
+	 ${image} redis://127.0.0.1:7000,redis://127.0.0.1:7001,redis://127.0.0.1:7002 10000 1000 5 PT5M 4`
+
