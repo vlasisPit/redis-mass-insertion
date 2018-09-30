@@ -38,28 +38,41 @@ public class RedisMassInsert {
         String numberOfThreads = args[5];
 
         String keyFormat = "{%s}:redis-bulk-import:%s";
-        String tenantFormat = "redis-%s-mass-%s";
-        String[] tenants = createTenantIDs(Integer.parseInt(keyHashTagNumber), tenantFormat);
+        String keyHashTagFormat = "redis-%s-keyHashTag-%s";
+        String[] keyHashTags = createKeyHashTags(Integer.parseInt(keyHashTagNumber), keyHashTagFormat);
 
-        redisMassInsertion(keyFormat, tenants, numberOfKeys, batchSize, redisClusterString, expirationTime, Integer.parseInt(numberOfThreads));
+        redisMassInsertion(keyFormat, keyHashTags, numberOfKeys, batchSize, redisClusterString, expirationTime, Integer.parseInt(numberOfThreads));
     }
 
-    private static String[] createTenantIDs(int numberOfTenants, String tenantFormat) {
+    /**
+     * Hash tags are a way to ensure that multiple keys are allocated in the same hash slot. This is used in order to implement multi-key operations
+     * in Redis Cluster. In order to implement hash tags, the hash slot for a key is computed in a slightly different way in certain conditions. If
+     * the key contains a "{...}" pattern only the substring between { and } is hashed in order to obtain the hash slot. However since it is possible
+     * that there are multiple occurrences of { or } the algorithm is well specified by the following rules:     *
+     * -IF the key contains a { character.
+     * -AND IF there is a } character to the right of {
+     * -AND IF there are one or more characters between the first occurrence of { and the first occurrence of }.
+     * Then instead of hashing the key, only what is between the first occurrence of { and the following first occurrence of } is hashed.
+     * @param keyHashTagNumber
+     * @param keyHashTagFormat
+     * @return
+     */
+    private static String[] createKeyHashTags(int keyHashTagNumber, String keyHashTagFormat) {
         String randomNumber = Integer.toString(genNumber());
 
-        List<String> tenants = Stream
+        List<String> keyHashTags = Stream
                 .iterate(0, i -> i + 1)
-                .limit(numberOfTenants)
-                .map(x -> String.format(tenantFormat, randomNumber, Integer.toString(x % numberOfTenants)))
+                .limit(keyHashTagNumber)
+                .map(x -> String.format(keyHashTagFormat, randomNumber, Integer.toString(x % keyHashTagNumber)))
                 .collect(toList());
 
-        return tenants.toArray(new String[tenants.size()]);
+        return keyHashTags.toArray(new String[keyHashTags.size()]);
     }
 
-    private static void redisMassInsertion(String keyFormat, String[] tenants, String numberOfKeys, String batchSize, String redisClusterString, Duration expirationTime, int numberOfThreads) throws InterruptedException {
+    private static void redisMassInsertion(String keyFormat, String[] keyHashTags, String numberOfKeys, String batchSize, String redisClusterString, Duration expirationTime, int numberOfThreads) {
         ExecutorService executor = Executors.newFixedThreadPool(numberOfThreads);
 
-        Supplier<Boolean> work = () -> executeUsingASyncCommands(keyFormat, tenants, numberOfKeys, batchSize, redisClusterString, expirationTime);
+        Supplier<Boolean> work = () -> executeUsingASyncCommands(keyFormat, keyHashTags, numberOfKeys, batchSize, redisClusterString, expirationTime);
 
         List<CompletableFuture<Boolean>> completableFutureList = IntStream.rangeClosed(1, numberOfThreads)
                 .mapToObj(i-> CompletableFuture.supplyAsync(work))
@@ -82,11 +95,11 @@ public class RedisMassInsert {
      * you invoke a command, you’re no longer able to interact with the connection until the blocking call ends.
      *  Grouping multiple commands in a batch (size depends on your environment, but batches between 50 and 1000 work nice during
      *  performance tests) can increase the throughput up to a factor of 5x
-     * @param tenants
+     * @param keyHashTags
      * @param numberOfKeys
      * @param redisClusterString
      */
-    private static boolean executeUsingASyncCommands(String keyFormat, String[] tenants, String numberOfKeys, String batchSize, String redisClusterString, Duration expirationTime) {
+    private static boolean executeUsingASyncCommands(String keyFormat, String[] keyHashTags, String numberOfKeys, String batchSize, String redisClusterString, Duration expirationTime) {
         RedisClusterClient clusterClient = getRedisClusterClient(redisClusterString);
         StatefulRedisClusterConnection<String, String> connection = clusterClient.connect();
         RedisAdvancedClusterAsyncCommands<String, String> a_syncCommands = connection.async();
@@ -98,8 +111,8 @@ public class RedisMassInsert {
         for (int i=0; i< Integer.parseInt(numberOfKeys)/Integer.parseInt(batchSize); i++) {
             List<RedisFuture<?>> futures = new ArrayList();
             for(int j=0; j<Integer.parseInt(batchSize); j++) {
-                int tenantIndex = j%(tenants.length);
-                String key = String.format(keyFormat, tenants[tenantIndex], produceRandomUuid());
+                int keyHashTagsIndex = j%(keyHashTags.length);
+                String key = String.format(keyFormat, keyHashTags[keyHashTagsIndex], produceRandomUuid());
                 futures.add(a_syncCommands.hset(key, "FirstName", "John"));
                 futures.add(a_syncCommands.expire(key, expirationTime.getSeconds()));
             }
