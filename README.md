@@ -6,7 +6,7 @@ Application argument's are the following:
 
 * redisClusterString (args[0]): Redis cluster string in the following form. Each connection string must have the form `redis :// host [: port]`.
 Cluster connection string argument must consist of such connection strings delimeted by `,`.
-Example ` redis://127.0.0.1:7000,redis://127.0.0.1:7001,redis://127.0.0.1:7002 `
+Example ` redis://192.168.33.10:7000,redis://192.168.33.10:7001,redis://192.168.33.10:7002,redis://192.168.33.10:7003,redis://192.168.33.10:7004,redis://192.168.33.10:7005 `
 	
 * numberOfKeys (args[1]): Number of keys to be inserted from each thread.
 
@@ -26,10 +26,11 @@ This is for 5 minutes.
 You can run the application as a simple Java application, but also as a Docker container or service, if you use docker swarm.
 
 * Run as java application (change the ${maven-version} with maven project version eg 1.0-SNAPSHOT)
-`java -jar target/redis-mass-insertion-${maven-version}-jar-with-dependencies.jar redis://127.0.0.1:7000,redis://127.0.0.1:7001,redis://127.0.0.1:7002 10000 1000 5 PT5M 4`
+`java -jar target/redis-mass-insertion-${maven-version}-jar-with-dependencies.jar redis://192.168.33.10:7000,redis://192.168.33.10:7001,redis://192.168.33.10:7002,redis://192.168.33.10:7003,redis://192.168.33.10:7004,redis://192.168.33.10:7005 10000 1000 5 PT5M 4`
 
 * Run as docker container (first you need to build the docker image)
-`docker run -d ${image} -e 'JAVA_OPTS=-server -Xms32m -Xmx64m -XX:+UseG1GC -XX:MaxGCPauseMillis=1000 -XX:ParallelGCThreads=4 -XX:ConcGCThreads=2 -XX:InitiatingHeapOccupancyPercent=70' redis://127.0.0.1:7000,redis://127.0.0.1:7001,redis://127.0.0.1:7002 10000 1000 5 PT5M 4`
+`docker build -t redis-bulk-import .`
+`docker run -d ${image} -e 'JAVA_OPTS=-server -Xms32m -Xmx64m -XX:+UseG1GC -XX:MaxGCPauseMillis=1000 -XX:ParallelGCThreads=4 -XX:ConcGCThreads=2 -XX:InitiatingHeapOccupancyPercent=70' redis://192.168.33.10:7000,redis://192.168.33.10:7001,redis://192.168.33.10:7002,redis://192.168.33.10:7003,redis://192.168.33.10:7004,redis://192.168.33.10:7005 10000 1000 5 PT5M 4`
 
 * Run as docker service in swarm mode
 `docker service create 
@@ -41,5 +42,5 @@ You can run the application as a simple Java application, but also as a Docker c
 	-e docker_component=redis-mass-insertion 
 	-e 'JAVA_OPTS=-server -Xms32m -Xmx64m -XX:+UseG1GC -XX:MaxGCPauseMillis=1000 -XX:ParallelGCThreads=4 -XX:ConcGCThreads=2 -XX:InitiatingHeapOccupancyPercent=70' 
 	--network=${network name} 
-	 ${image} redis://127.0.0.1:7000,redis://127.0.0.1:7001,redis://127.0.0.1:7002 10000 1000 5 PT5M 4`
+	 ${image} redis://192.168.33.10:7000,redis://192.168.33.10:7001,redis://192.168.33.10:7002,redis://192.168.33.10:7003,redis://192.168.33.10:7004,redis://192.168.33.10:7005 10000 1000 5 PT5M 4`
 
