@@ -24,6 +24,7 @@ This is for 5 minutes.
 
 # Run the application
 You can run the application as a simple Java application, but also as a Docker container or service, if you use docker swarm.
+You can execute the script `deploy.sh` in folder scripts, in order to build the project, build the docker image and execute the application as a docker container or a docker service.
 
 * Run as java application (change the ${maven-version} with maven project version eg 1.0-SNAPSHOT)
 `java -jar target/redis-mass-insertion-${maven-version}-jar-with-dependencies.jar redis://192.168.33.10:7000,redis://192.168.33.10:7001,redis://192.168.33.10:7002,redis://192.168.33.10:7003,redis://192.168.33.10:7004,redis://192.168.33.10:7005 10000 1000 5 PT5M 4`
